@@ -4,6 +4,7 @@ import scrapy
 # Citas = //span[@class="text" and @itemprop="text"]/text()
 # Top ten tags = //div[contains(@class, "tags-box")]//span[@class="tag-item"]/a/text()
 # Next page button = //ul[@class="pager"]//li[@class="next"]/a/@href
+# Author = //span/small[@class="author"]/text()
 
 
 class QuotesSpider(scrapy.Spider):
@@ -26,16 +27,20 @@ class QuotesSpider(scrapy.Spider):
     def parse_only_quotes(self, response, **kwargs):
         if kwargs:
             quotes = kwargs['quotes']
+            authors = kwargs['author']
         quotes.extend(response.xpath(
             '//span[@class="text" and @itemprop="text"]/text()').getall())
+        authors.extend(response.xpath(
+            '//span/small[@class="author"]/text()').getall())
 
         next_page_button_link = response.xpath(
             '//ul[@class="pager"]//li[@class="next"]/a/@href').get()
         if next_page_button_link:
-            yield response.follow(next_page_button_link, callback=self.parse_only_quotes, cb_kwargs={'quotes': quotes})
+            yield response.follow(next_page_button_link, callback=self.parse_only_quotes, cb_kwargs={'quotes': quotes, 'author': authors})
         else:
+            quotes_author = list(zip(quotes, authors))
             yield {
-                'quotes': quotes
+                'quotes': quotes_author
             }
 
     def parse(self, response):
@@ -44,6 +49,8 @@ class QuotesSpider(scrapy.Spider):
             '//span[@class="text" and @itemprop="text"]/text()').getall()
         top_tags = response.xpath(
             '//div[contains(@class, "tags-box")]//span[@class="tag-item"]/a/text()').getall()
+        authors = response.xpath(
+            '//span/small[@class="author"]/text()').getall()
 
         top = getattr(self, 'top', None)
         if top:
@@ -58,4 +65,4 @@ class QuotesSpider(scrapy.Spider):
         next_page_button_link = response.xpath(
             '//ul[@class="pager"]//li[@class="next"]/a/@href').get()
         if next_page_button_link:
-            yield response.follow(next_page_button_link, callback=self.parse_only_quotes, cb_kwargs={'quotes': quotes})
+            yield response.follow(next_page_button_link, callback=self.parse_only_quotes, cb_kwargs={'quotes': quotes, 'author': authors})
